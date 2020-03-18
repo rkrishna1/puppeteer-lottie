@@ -96,8 +96,8 @@ You must pass either `path` or `animationData` to specify the Lottie animation.
 
 `output` must be one of the following:
 
--   An image to capture the first frame only (png or jpg)
--   An image pattern (eg. sprintf format 'frame-%d.png' or 'frame-%012d.jpg')
+-   An image to capture the first frame only, or optionally with `captureFrame` (png, jpg, svg)
+-   An image pattern (eg. sprintf format 'frame-%d.png', 'frame-%012d.jpg', 'frame-%012d.svg')
 -   An mp4 video file (requires FFmpeg to be installed)
 -   A GIF file (requires Gifski to be installed)
 
