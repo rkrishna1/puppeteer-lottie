@@ -118,8 +118,9 @@ module.exports = async (opts) => {
   const isMp4 = (ext === 'mp4')
   const isPng = (ext === 'png')
   const isJpg = (ext === 'jpg' || ext === 'jpeg')
+  const isSvg = (ext === 'svg')
 
-  if (!(isGif || isMp4 || isPng || isJpg)) {
+  if (!(isGif || isMp4 || isPng || isJpg || isSvg)) {
     throw new Error(`Unsupported output format "${output}"`)
   }
 
@@ -263,6 +264,7 @@ ${inject.body || ''}
 
   const pageFrame = page.mainFrame()
   const rootHandle = await pageFrame.$('#root')
+  const svgHandle = await pageFrame.$('#root svg')
 
   const screenshotOpts = {
     omitBackground: true,
@@ -352,10 +354,17 @@ ${inject.body || ''}
     // eslint-disable-next-line no-undef
     await page.evaluate((cframe) => animation.goToAndStop(cframe, true), cframe)
     const screenshot = await rootHandle.screenshot({
-      path: isMp4 ? undefined : frameOutputPath,
+      path: (isMp4 || isSvg) ? undefined : frameOutputPath,
       ...screenshotOpts
     })
 
+    // svg output is handled in page
+    if(isSvg) {
+      fs.writeFileSync(frameOutputPath, await page.evaluate((svgHandle) => {
+        return (new XMLSerializer()).serializeToString(svgHandle);
+      }, svgHandle))
+    }
+    
     // single screenshot
     if (!isMultiFrame) {
       break
