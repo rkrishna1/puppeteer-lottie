@@ -65,6 +65,13 @@ await renderLottie({
   output: 'preview.jpg',
   captureFrame: 10
 })
+
+// Render the tenth frame of the animation as a SVG
+await renderLottie({
+  path: 'fixtures/bodymovin.json',
+  output: 'preview.svg',
+  captureFrame: 10
+})
 ```
 
 #### Output Size
