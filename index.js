@@ -72,7 +72,7 @@ module.exports = async (opts) => {
     style = { },
     inject = { },
     startFrame = 0,
-    endFrame = 1000000,
+    endFrame = -1,
     puppeteerOptions = {
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox", "--single-process", "--no-zygote", "--font-render-hinting=none", "--use-gl=desktop"]
@@ -226,8 +226,7 @@ ${inject.body || ''}
       loop: false,
       autoplay: false,
       rendererSettings: ${JSON.stringify(rendererSettings)},
-      animationData,
-      initialSegment:[${startFrame},${endFrame}+1] //By default startframe=0 and endframe=1000000
+      animationData
     })
 
     duration = animation.getDuration()
@@ -268,7 +267,9 @@ ${inject.body || ''}
   await page.setContent(html)
   await page.waitForSelector('.ready')
   const duration = await page.evaluate(() => duration)
+  console.log(duration);
   const numFrames = await page.evaluate(() => numFrames)
+  console.log(numFrames);
 
   const pageFrame = page.mainFrame()
   const rootHandle = await pageFrame.$('#root')
