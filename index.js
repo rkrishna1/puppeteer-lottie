@@ -54,6 +54,8 @@ const injectLottie = `
  * @param {string} [opts.inject.style] - Optionally injected into a <style> tag within the document <head>
  * @param {string} [opts.inject.body] - Optionally injected into the document <body>
  * @param {object} [opts.browser] - Optional puppeteer instance to reuse
+ * @param {object} [opts.startFrame] - Optional lottie-web initialSegment set segment for exporting specific frame
+ * @param {object} [opts.endFrame] - Optional lottie-web initialSegment set segment for exporting specific frame
  * @param {object} [opts.progress] - Optional callback to report rendering progress, will be called with the following parameters: (frame, totalFrames)
  * @return {Promise}
  */
@@ -69,9 +71,14 @@ module.exports = async (opts) => {
     rendererSettings = { },
     style = { },
     inject = { },
-    puppeteerOptions = { },
+    startFrame = 0,
+    endFrame = 1000000,
+    puppeteerOptions = {
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--single-process", "--no-zygote", "--font-render-hinting=none", "--use-gl=desktop"]
+    },
     ffmpegOptions = {
-      crf: 20,
+      crf: 14,
       profileVideo: 'main',
       preset: 'medium'
     },
@@ -118,8 +125,9 @@ module.exports = async (opts) => {
   const isMp4 = (ext === 'mp4')
   const isPng = (ext === 'png')
   const isJpg = (ext === 'jpg' || ext === 'jpeg')
+  const isWebm = (ext === 'webm')
 
-  if (!(isApng || isGif || isMp4 || isPng || isJpg)) {
+  if (!(isWebm || isApng || isGif || isMp4 || isPng || isJpg)) {
     throw new Error(`Unsupported output format "${output}"`)
   }
 
@@ -128,7 +136,7 @@ module.exports = async (opts) => {
     ? path.join(tempDir, 'frame-%012d.png')
     : output
   const frameType = (isJpg ? 'jpeg' : 'png')
-  const isMultiFrame = isApng || isMp4 || /%d|%\d{2,3}d/.test(tempOutput)
+  const isMultiFrame = isWebm || isApng || isMp4 || /%d|%\d{2,3}d/.test(tempOutput)
 
   let lottieData = animationData
 
@@ -218,7 +226,8 @@ ${inject.body || ''}
       loop: false,
       autoplay: false,
       rendererSettings: ${JSON.stringify(rendererSettings)},
-      animationData
+      animationData,
+      initialSegment:[${startFrame},${endFrame}+1] //By default startframe=0 and endframe=1000000
     })
 
     duration = animation.getDuration()
@@ -282,7 +291,7 @@ ${inject.body || ''}
   let ffmpeg
   let ffmpegStdin
 
-  if (isApng || isMp4) {
+  if (isApng || isMp4 || isWebm) {
     ffmpegP = new Promise((resolve, reject) => {
       const ffmpegArgs = [
         '-v', 'error',
@@ -320,6 +329,16 @@ ${inject.body || ''}
           '-crf', ffmpegOptions.crf,
           '-movflags', 'faststart',
           '-pix_fmt', 'yuv420p',
+          '-r', fps
+        )
+      }
+
+      if (isWebm) {
+        ffmpegArgs.push(
+          '-f', 'image2pipe', '-c:v', 'png', '-r', `${fps}`, '-i', '-',
+          '-c:v', 'libvpx-vp9',
+          '-crf', ffmpegOptions.crf,
+          '-pix_fmt', 'yuva420p',
           '-r', fps
         )
       }
@@ -365,10 +384,10 @@ ${inject.body || ''}
     // eslint-disable-next-line no-undef
     await page.evaluate((frame) => animation.goToAndStop(frame, true), frame)
     const screenshot = await rootHandle.screenshot({
-      path: (isApng || isMp4) ? undefined : frameOutputPath,
+      path: (isApng || isMp4 || isWebm) ? undefined : frameOutputPath,
       ...screenshotOpts
     })
-    
+
     if(progress) {
       progress(frame, numFrames)
     }
@@ -378,7 +397,7 @@ ${inject.body || ''}
       break
     }
 
-    if (isApng || isMp4) {
+    if (isApng || isMp4 || isWebm) {
       if (ffmpegStdin.writable) {
         ffmpegStdin.write(screenshot)
       }
@@ -396,8 +415,8 @@ ${inject.body || ''}
     spinnerR.succeed()
   }
 
-  if (isApng || isMp4) {
-    const spinnerF = !quiet && ora(`Generating ${isApng ? 'animated png' : 'mp4'} with FFmpeg`).start()
+  if (isApng || isMp4 || isWebm) {
+    const spinnerF = !quiet && ora(`Generating ${isApng ? 'animated png' : 'mp4/webm'} with FFmpeg`).start()
 
     ffmpegStdin.end()
     await ffmpegP

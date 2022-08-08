@@ -1,6 +1,6 @@
 {
   "name": "puppeteer-lottie",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Renders Lottie animations via Puppeteer to image, GIF, or MP4.",
   "main": "index.js",
   "repository": "transitive-bullshit/puppeteer-lottie",
@@ -40,6 +40,7 @@
     "execa": "^1.0.0",
     "fs-extra": "^8.1.0",
     "lottie-web": "^5.7.0",
+    "npm-pack-all": "^1.12.7",
     "ora": "^4.0.3",
     "ow": "^0.17.0",
     "pluralize": "^7.0.0",
